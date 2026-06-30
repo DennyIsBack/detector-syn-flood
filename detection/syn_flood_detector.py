@@ -57,10 +57,15 @@ class SynFloodDetector:
             syn = self.Syn_packages
             ack = self.SynAck_packages
 
-            if syn == 0:
+            # ISH = (Total de SYNs recebidos / Total de SYN-ACKs enviados) * 100
+            # Em trafego normal cada SYN gera ~1 SYN-ACK, entao ISH ~100%.
+            # Em um ataque, o servidor retransmite varios SYN-ACK por SYN
+            # (back off do RTO), o denominador cresce e o ISH cai bem abaixo
+            # de 100% -- e essa queda que indica o SYN Flood.
+            if ack == 0:
                 percentual = 100
             else:
-                percentual = (ack / syn) * 100
+                percentual = (syn / ack) * 100
 
             self.historico.append({
                 "tempo": datetime.now(),
