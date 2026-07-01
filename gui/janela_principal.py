@@ -16,6 +16,9 @@ class JanelaPrincipal:
         self.janela.title("Monitor TCP")
         self.janela.geometry("1000x500")
 
+        # Numero maximo de linhas mantidas na tabela de pacotes
+        self.limite_linhas = 500
+
         self.criar_componentes()
 
         self.controller = AppController(self)
@@ -224,6 +227,13 @@ class JanelaPrincipal:
                     destino
                 )
             )
+
+            # Mantem apenas as ultimas linhas para a tabela nao crescer
+            # indefinidamente e pesar a interface sob alto volume de pacotes.
+            filhos = self.tabela.get_children()
+            while len(filhos) > self.limite_linhas:
+                self.tabela.delete(filhos[0])
+                filhos = self.tabela.get_children()
 
             self.tabela.yview_moveto(1)
 
