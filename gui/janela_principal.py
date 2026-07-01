@@ -43,6 +43,25 @@ class JanelaPrincipal:
             text=f"Taxa de SYN / SYN-ACK: {dados['percentual']:.2f}%"
         )
 
+        self.lbl_media.config(
+            text=f"Media de SYNs: {dados.get('media', 0):.1f}/s"
+        )
+
+        self.lbl_pico.config(
+            text=f"Maior pico de SYNs: {dados.get('pico', 0)}/s"
+        )
+
+        top_ips = dados.get("top_ips", [])
+
+        if top_ips:
+            texto = "IPs suspeitos:\n" + "\n".join(
+                f"  {ip} ({qtd})" for ip, qtd in top_ips
+            )
+        else:
+            texto = "IPs suspeitos: nenhum"
+
+        self.lbl_atacantes.config(text=texto)
+
         p = dados["percentual"]
 
         if p <= 50:
@@ -165,6 +184,20 @@ class JanelaPrincipal:
 
         self.lbl_percentual = tk.Label(frame_stats, text="Taxa de SYN / SYN-ACK: 0%", anchor="w")
         self.lbl_percentual.pack(fill="x", padx=5, pady=2)
+
+        self.lbl_media = tk.Label(frame_stats, text="Media de SYNs: 0/s", anchor="w")
+        self.lbl_media.pack(fill="x", padx=5, pady=2)
+
+        self.lbl_pico = tk.Label(frame_stats, text="Maior pico de SYNs: 0/s", anchor="w")
+        self.lbl_pico.pack(fill="x", padx=5, pady=2)
+
+        self.lbl_atacantes = tk.Label(
+            frame_stats,
+            text="IPs suspeitos: nenhum",
+            anchor="w",
+            justify="left"
+        )
+        self.lbl_atacantes.pack(fill="x", padx=5, pady=2)
 
         self.lbl_status = tk.Label(
             frame_stats,

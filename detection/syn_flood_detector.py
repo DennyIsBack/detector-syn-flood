@@ -39,7 +39,9 @@ class SynFloodDetector:
         self.estatisticas = {
             "syn": 0,
             "ack": 0,
-            "percentual": 100
+            "percentual": 100,
+            "media": 0,
+            "pico": 0
         }
 
         self.historico = deque(maxlen=60) 
@@ -85,10 +87,16 @@ class SynFloodDetector:
                 "percentual": percentual
             })
 
+            syns_historico = [h["syn"] for h in self.historico]
+            media = sum(syns_historico) / len(syns_historico) if syns_historico else 0
+            pico = max(syns_historico) if syns_historico else 0
+
             self.estatisticas = {
                 "syn": syn,
                 "ack": ack,
-                "percentual": percentual
+                "percentual": percentual,
+                "media": media,
+                "pico": pico
             }
 
             self._verificar_alerta(percentual, syn, ack)
@@ -126,9 +134,9 @@ class SynFloodDetector:
 
         
 
-    def _ip_mais_suspeito(self):
+    def obter_atacantes(self, limite=5):
         # Agrega as conexoes semiabertas (SYN sem handshake concluido) por
-        # IP de origem e retorna o endereco com maior numero delas.
+        # IP de origem e retorna um ranking (ip, contagem) do maior para o menor.
         contagem = defaultdict(int)
 
         for chave, dados in self.pacotes.items():
@@ -136,10 +144,13 @@ class SynFloodDetector:
                 ip_origem = chave[0]
                 contagem[ip_origem] += 1
 
-        if not contagem:
-            return None
+        ranking = sorted(contagem.items(), key=lambda item: item[1], reverse=True)
+        return ranking[:limite]
 
-        return max(contagem, key=contagem.get)
+    def _ip_mais_suspeito(self):
+        # Retorna o IP de origem com maior numero de conexoes semiabertas.
+        ranking = self.obter_atacantes(limite=1)
+        return ranking[0][0] if ranking else None
 
     def _verificar_alerta(self, percentual, syn, ack):
         # Detecta a transicao de estado (normal <-> ataque) e registra em log.
@@ -159,7 +170,9 @@ class SynFloodDetector:
             )
 
     def obter_estatisticas(self):
-        return self.estatisticas
+        dados = dict(self.estatisticas)
+        dados["top_ips"] = self.obter_atacantes()
+        return dados
 
 
     def obter_historico(self):
