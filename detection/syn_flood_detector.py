@@ -2,6 +2,8 @@ from collections import defaultdict
 from collections import deque
 from datetime import datetime
 
+from detection.registro import get_logger
+
 
 class SynFloodDetector:
 
@@ -9,6 +11,15 @@ class SynFloodDetector:
 
         #Limite de tempo em que uma porta fica aberta
         self.limite = 75
+
+        # Logger para alertas e eventos em arquivo
+        self.logger = get_logger()
+
+        # Limiar de ISH abaixo do qual consideramos ataque
+        self.limiar_ataque = 50
+
+        # Estado atual (usado para detectar transicoes normal <-> ataque)
+        self.em_ataque = False
 
         # estatísticas por IP
         self.pacotes = defaultdict(lambda: {
@@ -80,6 +91,8 @@ class SynFloodDetector:
                 "percentual": percentual
             }
 
+            self._verificar_alerta(percentual, syn, ack)
+
             self.Syn_packages = 0
             self.SynAck_packages = 0
 
@@ -112,6 +125,38 @@ class SynFloodDetector:
                 self.pacotes.pop(chave)
 
         
+
+    def _ip_mais_suspeito(self):
+        # Agrega as conexoes semiabertas (SYN sem handshake concluido) por
+        # IP de origem e retorna o endereco com maior numero delas.
+        contagem = defaultdict(int)
+
+        for chave, dados in self.pacotes.items():
+            if dados["syn"] == 1:
+                ip_origem = chave[0]
+                contagem[ip_origem] += 1
+
+        if not contagem:
+            return None
+
+        return max(contagem, key=contagem.get)
+
+    def _verificar_alerta(self, percentual, syn, ack):
+        # Detecta a transicao de estado (normal <-> ataque) e registra em log.
+        if percentual <= self.limiar_ataque and not self.em_ataque:
+            self.em_ataque = True
+            suspeito = self._ip_mais_suspeito() or "desconhecido"
+            self.logger.warning(
+                "ALERTA SYN Flood: ISH=%.1f%% | SYN=%d | SYN-ACK=%d | "
+                "origem suspeita=%s",
+                percentual, syn, ack, suspeito
+            )
+
+        elif percentual > self.limiar_ataque and self.em_ataque:
+            self.em_ataque = False
+            self.logger.info(
+                "Situacao normalizada: ISH=%.1f%%", percentual
+            )
 
     def obter_estatisticas(self):
         return self.estatisticas
