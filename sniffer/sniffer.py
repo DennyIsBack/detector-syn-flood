@@ -1,5 +1,6 @@
 from scapy.all import AsyncSniffer, IP, TCP
 from detection.syn_flood_detector import SynFloodDetector
+from detection.registro import get_logger
 
 
 class SnifferTCP:
@@ -7,6 +8,7 @@ class SnifferTCP:
     def __init__(self, callback):
         self.callback = callback
         self.detector = SynFloodDetector()
+        self.logger = get_logger()
 
         self.sniffer = AsyncSniffer(
             prn=self.analisar_pacote,
@@ -65,12 +67,15 @@ class SnifferTCP:
 
     def iniciar(self):
         self.sniffer.start()
+        self.logger.info("Captura iniciada na interface padrao")
 
     def parar(self):
 
         try:
             if self.sniffer.running:
                 self.sniffer.stop()
+                self.logger.info("Captura encerrada")
         except Exception as erro:
             print("Erro ao parar sniffer:", erro)
+            self.logger.error("Erro ao parar sniffer: %s", erro)
 
