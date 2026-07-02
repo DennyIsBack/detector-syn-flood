@@ -1,3 +1,4 @@
+import queue
 import tkinter as tk
 from tkinter import ttk
 
@@ -19,11 +20,17 @@ class JanelaPrincipal:
         # Numero maximo de linhas mantidas na tabela de pacotes
         self.limite_linhas = 500
 
+        # Fila de pacotes vindos do sniffer (outra thread). A insercao na
+        # tabela e feita em lote por _drenar_fila, evitando agendar um
+        # evento no Tkinter por pacote (o que travava a interface).
+        self.fila_pacotes = queue.Queue(maxsize=5000)
+
         self.criar_componentes()
 
         self.controller = AppController(self)
         self.controller.iniciar()
         self.atualizar_estatisticas()
+        self._drenar_fila()
 
         self.janela.protocol(
             "WM_DELETE_WINDOW",
@@ -158,7 +165,14 @@ class JanelaPrincipal:
             text="Enviar SYN",
             command=lambda:
                 self.controller.enviar_syn()
-        ).pack(fill="x", padx=10, pady=10)
+        ).pack(fill="x", padx=10, pady=(10, 5))
+
+        tk.Button(
+            frame_direita,
+            text="Simular ataque",
+            command=lambda:
+                self.controller.simular_ataque()
+        ).pack(fill="x", padx=10, pady=5)
 
         tk.Button(
             frame_direita,
@@ -215,32 +229,41 @@ class JanelaPrincipal:
         origem,
         destino
     ):
+        # Chamado pela thread do sniffer: apenas enfileira (operacao
+        # thread-safe). Se a fila encher sob um flood, descarta o pacote
+        # mais novo para nao acumular memoria nem travar a captura.
+        try:
+            self.fila_pacotes.put_nowait((flag, origem, destino))
+        except queue.Full:
+            pass
 
-        def atualizar():
+    def _drenar_fila(self):
 
+        itens = []
+        try:
+            while len(itens) < 5000:
+                itens.append(self.fila_pacotes.get_nowait())
+        except queue.Empty:
+            pass
+
+        # Como a tabela guarda no maximo limite_linhas, so as mais recentes
+        # importam -- inserimos apenas a cauda e evitamos trabalho inutil.
+        for flag, origem, destino in itens[-self.limite_linhas:]:
             self.tabela.insert(
                 "",
                 "end",
-                values=(
-                    flag,
-                    origem,
-                    destino
-                )
+                values=(flag, origem, destino)
             )
 
-            # Mantem apenas as ultimas linhas para a tabela nao crescer
-            # indefinidamente e pesar a interface sob alto volume de pacotes.
-            filhos = self.tabela.get_children()
-            while len(filhos) > self.limite_linhas:
-                self.tabela.delete(filhos[0])
-                filhos = self.tabela.get_children()
+        filhos = self.tabela.get_children()
+        if len(filhos) > self.limite_linhas:
+            for iid in filhos[:-self.limite_linhas]:
+                self.tabela.delete(iid)
 
+        if itens:
             self.tabela.yview_moveto(1)
 
-        self.janela.after(
-            0,
-            atualizar
-        )
+        self.janela.after(300, self._drenar_fila)
 
     def fechar(self):
 

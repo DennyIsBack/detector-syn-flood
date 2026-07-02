@@ -114,14 +114,12 @@ class SynFloodDetector:
             self.pacotes[chave_cliente]["time_inicial"] = timestamp
             self.pacotes[chave_cliente]["ultimo_time"] = timestamp
             self.Syn_packages += 1
-            print("SYN =", chave_cliente)
 
         #Se o servidor responder o pedido de conexão
         elif flag == "SYN + ACK":
-            self.pacotes[chave_servidor]["syn-ack"] += 1         
+            self.pacotes[chave_servidor]["syn-ack"] += 1
             self.pacotes[chave_servidor]["ultimo_time"] = timestamp
             self.SynAck_packages += 1
-            print("SYN-ACK =", chave_servidor)
 
         #Se o cliente concluir o handshake
         elif flag == "ACK" and chave_cliente in self.pacotes:
