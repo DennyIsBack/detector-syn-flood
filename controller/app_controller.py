@@ -26,9 +26,14 @@ class AppController:
     def enviar_syn(self):
         enviar_syn()
 
-    def simular_ataque(self):
+    def simular_ataque(self, retransmissoes=3):
         # Roda em uma thread para nao congelar a interface durante o burst.
-        threading.Thread(target=simular_ataque, daemon=True).start()
+        # 'retransmissoes' controla a intensidade: ISH ~ 100 / retransmissoes.
+        threading.Thread(
+            target=simular_ataque,
+            kwargs={"retransmissoes": retransmissoes},
+            daemon=True
+        ).start()
 
     def obter_historico(self):
         return self.sniffer.detector.obter_historico()

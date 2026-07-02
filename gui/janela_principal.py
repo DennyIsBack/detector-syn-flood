@@ -167,11 +167,28 @@ class JanelaPrincipal:
                 self.controller.enviar_syn()
         ).pack(fill="x", padx=10, pady=(10, 5))
 
+        frame_intensidade = tk.Frame(frame_direita)
+        frame_intensidade.pack(fill="x", padx=10, pady=(5, 0))
+
+        tk.Label(
+            frame_intensidade,
+            text="Intensidade (SYN-ACK por SYN):"
+        ).pack(side="left")
+
+        self.spin_intensidade = tk.Spinbox(
+            frame_intensidade,
+            from_=1,
+            to=10,
+            width=4
+        )
+        self.spin_intensidade.delete(0, "end")
+        self.spin_intensidade.insert(0, "3")
+        self.spin_intensidade.pack(side="right")
+
         tk.Button(
             frame_direita,
             text="Simular ataque",
-            command=lambda:
-                self.controller.simular_ataque()
+            command=self._simular_ataque
         ).pack(fill="x", padx=10, pady=5)
 
         tk.Button(
@@ -222,6 +239,17 @@ class JanelaPrincipal:
             font=("Arial", 10, "bold")
         )
         self.lbl_status.pack(pady=10)
+
+    def _simular_ataque(self):
+        # Le a intensidade do campo; usa 3 se o valor for invalido.
+        try:
+            intensidade = int(self.spin_intensidade.get())
+        except (ValueError, TypeError):
+            intensidade = 3
+
+        intensidade = max(1, min(intensidade, 10))
+
+        self.controller.simular_ataque(retransmissoes=intensidade)
 
     def adicionar_tabela(
         self,
