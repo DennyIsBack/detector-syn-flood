@@ -107,7 +107,7 @@ class SynFloodDetector:
             self.stats_timer = timestamp
 
         #Se um cliente tentar fazer uma nova conexão
-        if flag == "SYN" and chave_cliente not in self.pacotes:
+        if flag == "SYN" and chave_cliente not in self.pacotes and source_port != 21:
             self.pacotes[chave_cliente]["syn"] = 1
             self.pacotes[chave_cliente]["source_port"] = source_port
             self.pacotes[chave_cliente]["destiny_port"] = destiny_port
@@ -116,7 +116,7 @@ class SynFloodDetector:
             self.Syn_packages += 1
 
         #Se o servidor responder o pedido de conexão
-        elif flag == "SYN + ACK":
+        elif flag == "SYN + ACK" and destiny_port != 21:
             self.pacotes[chave_servidor]["syn-ack"] += 1
             self.pacotes[chave_servidor]["ultimo_time"] = timestamp
             self.SynAck_packages += 1
